@@ -1,14 +1,63 @@
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput} from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Fontisto } from '@expo/vector-icons';
 import { theme } from './color';
+
+const STORAGE_KEY = "@toDos"
 
 export default function App() {
   const [working, setWorking] = useState(true);
   const [text, setText] = useState("");
+  const [toDos, setToDos] = useState({});
+  useEffect(() => {loadToDos();}, []);
   const travel = () => setWorking(false);
   const work = () => setWorking(true);
   const onChangeText = (payload) => setText(payload);
+  // AsyncStorage 사용시 try catch 구문 사용하기 (사용자 폰의 용량이 없거나 하는 경우 대비)
+  const saveToDos = async (toSave) => {
+    await AsyncStorage.setItem( STORAGE_KEY , JSON.stringify(toSave))
+  }
+  const loadToDos = async () => {
+    const s = await AsyncStorage.getItem(STORAGE_KEY);
+    setToDos(JSON.parse(s));
+  }
+  const addToDo = async () => { 
+    if(text === "") {
+      return; 
+    }
+    // object assign을 이용한 todo 받아오기
+    const newToDos = Object.assign(
+      {},
+      toDos,
+      {[Date.now()] : {text, working}}
+      )
+
+
+    // es6 javascript를 이용한 todo 받아오기
+    // const newToDos = {
+    //   ...toDos, 
+    //   [Date.now()]: {text, working}
+    //   };
+
+
+      setToDos(newToDos);
+      await saveToDos(newToDos);
+      setText("");
+  }
+
+  const deleteToDo = async (key) => {
+    Alert.alert("진짜 삭제하실거에여?", "진짜? 정말로?", [
+      {text:"취소"},
+      {text:"확인", onPress: async () => {
+        const newToDos = {...toDos};
+        delete newToDos[key];
+        setToDos(newToDos);
+        await saveToDos(newToDos);
+      } }
+    ])
+  }
 
   return (
     <View style={styles.container}>
@@ -21,7 +70,26 @@ export default function App() {
             <Text style={{...styles.btnTxt, color: !working ? "white" : theme.grey}}>Travel</Text>
         </TouchableOpacity>
       </View>
-      <TextInput onChangeText={onChangeText} value={text} placeholder={working ? "Add a To do" : "Where do you want go"} style={styles.input}></TextInput>
+      <TextInput 
+      returnKeyType='done'
+      onSubmitEditing={addToDo}
+      onChangeText={onChangeText} 
+      value={text} 
+      placeholder={working ? "Add a To do" : "Where do you want go"} 
+      style={styles.input}>       
+      </TextInput>
+      <ScrollView>{
+        Object.keys(toDos).map((key) => 
+          toDos[key].working === working ? (
+
+            <View style={styles.toDo} key={key}>
+              <Text style={styles.toDoText}>{toDos[key].text}</Text>
+              <TouchableOpacity onPress={() => deleteToDo(key)}><Text><Fontisto name="trash" size={18} color={theme.grey} /></Text></TouchableOpacity>
+            </View>
+
+          ) : null
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -46,7 +114,22 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     paddingHorizontal: 20,
     borderRadius : 30,
-    marginTop: 20,
+    marginVertical: 20,
     fontSize: 18,
+  },
+  toDo : {
+    backgroundColor: theme.toDoBg,
+    marginBottom : 10,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    borderRadius: 15,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  toDoText : {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500",
   }
 });
