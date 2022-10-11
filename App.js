@@ -6,18 +6,38 @@ import { Fontisto } from '@expo/vector-icons';
 import { theme } from './color';
 
 const STORAGE_KEY = "@toDos"
+const WORKING_SET = "@WorKings"
 
 export default function App() {
   const [working, setWorking] = useState(true);
   const [text, setText] = useState("");
   const [toDos, setToDos] = useState({});
-  useEffect(() => {loadToDos();}, []);
+  const [workingCheck, setWorkingCHeck] = useState({});
+  useEffect(() => {loadToDos();loadWorkCheck();}, []);
+  useEffect(() => {addWorkCheck();},[working]);
   const travel = () => setWorking(false);
   const work = () => setWorking(true);
   const onChangeText = (payload) => setText(payload);
   // AsyncStorage 사용시 try catch 구문 사용하기 (사용자 폰의 용량이 없거나 하는 경우 대비)
+  const saveWorks = async (working) => {
+    await AsyncStorage.setItem( WORKING_SET, JSON.stringify(working));
+  }
+
+  const addWorkCheck = async() => {
+    const newWorkCheck = Object.assign(
+      {},
+      workingCheck,
+      {working}
+    );
+  
+    await saveWorks(newWorkCheck);
+  }
+  const loadWorkCheck = async () => {
+    const l = await AsyncStorage.getItem(WORKING_SET);
+    setWorkingCHeck(JSON.parse(l));
+  }
   const saveToDos = async (toSave) => {
-    await AsyncStorage.setItem( STORAGE_KEY , JSON.stringify(toSave))
+    await AsyncStorage.setItem( STORAGE_KEY , JSON.stringify(toSave));
   }
   const loadToDos = async () => {
     const s = await AsyncStorage.getItem(STORAGE_KEY);
